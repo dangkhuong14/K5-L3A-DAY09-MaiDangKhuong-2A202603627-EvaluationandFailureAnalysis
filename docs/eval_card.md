@@ -66,3 +66,25 @@ Card này đi kèm mỗi báo cáo và được dùng lại ở Day 10. Mọi s�
 - **`pass_hat_5` bắt được thứ `pass_rate` bỏ qua:** `flaky_regression` (làm tròn sai 1/5 seed) có `pass_rate` 0.9143, vẫn trên sàn 0.85, nhưng `pass_hat_5` = 0.5714 → BLOCK. Agent đúng "trung bình" nhưng không đáng tin cho từng khách.
 - **Giới hạn cỡ mẫu:** một bug chỉ xuất hiện ở 1/3 seed (`rare`, bật khi `seed % 3 == 0`) chỉ chạm **seed 33** trong 11/22/33/44/55. Với 5 seed, không phát hiện nó một cách ổn định được: đổi bộ seed (ví dụ 11/22/44/55/77) là bug biến mất khỏi report. Muốn bắt ổn định cần nhiều seed hơn (với 15 seed, xác suất không gặp lần nào là (2/3)^15 ≈ 0.2%). Nhóm **không** hạ ngưỡng để "bắt" bug này. Đây là giới hạn của eval, không phải của gate.
 
+### Chống gian lận eval (M7)
+
+`gate.integrity_check` chạy **trước** mọi so sánh ngưỡng. Report không tin được thì gate trả `exit 1` với lý do `INTEGRITY`, kể cả khi số liệu trông xanh:
+
+| Kiểm tra | Trap bị chặn |
+|---|---|
+| Metric là NaN/inf | `evaluator_errors_as_nan` |
+| `evaluator_failures` khác rỗng (kể cả trên run xanh); dòng có giá trị không phải `True/False` cho metric được chấm (None, chuỗi "False") | `evaluator_errors_as_nan`, grader crash |
+| Số dòng ≠ items × seeds; cặp (item, seed) bị trùng | `dropped_failing_rows`, thay dòng fail bằng bản sao dòng pass |
+| Tập (item, seed), `items`, `seeds`, `eval_set_sha` khác baseline | `cherry_picked_seeds` |
+| Metric báo cáo khác giá trị tính lại từ rows | sửa tay số tổng |
+| Slice tag của item khác baseline | gỡ item lỗi khỏi `money_movement` |
+| Ratchet với `--base-spec` (cùng eval-set version): `max` không tăng, `min` không giảm, `max_increase` không tăng, không bỏ `no_significant_drop`, không bỏ `blocking`, không xoá metric hay slice | `loosened_spec` |
+
+Kết quả: `python -m lab9.traps …` chặn 4/4 trap công khai. Nhóm tự dựng thêm 5 trap (dòng trùng lặp, `evaluator_failures` trên baseline xanh, sửa tay metric, đổi slice tag, giá trị boolean dạng chuỗi), và cả 5 đều bị chặn. Baseline so với chính nó vẫn `exit 0`.
+
+**Trap có thể còn lọt:**
+- Report sinh **thật** từ một eval set đã bị sửa (bỏ item khó), nhưng baseline cũng được sinh lại từ eval set đó trong cùng PR. `eval_set_sha` khớp nhau nên gate không thấy. Cần CI sinh baseline từ `main` chứ không đọc file trong nhánh PR.
+- Sửa grader cho dễ hơn (ví dụ `RefundAmountCorrect` luôn trả True) rồi sinh lại cả PR lẫn baseline. Report trung thực với code đã bị làm hỏng. Cần code-owner cho `lab9/graders.py` và `config/`.
+- Seed chọn khéo trong **spec** (đổi `seeds` cùng baseline): integrity chỉ so với baseline, không so với seed cố định của khoá học.
+- Variant chỉ lỗi ở 1/3 seed (`rare`) không có trong 5 seed của spec: gate không thể thấy (xem mục giới hạn cỡ mẫu).
+
