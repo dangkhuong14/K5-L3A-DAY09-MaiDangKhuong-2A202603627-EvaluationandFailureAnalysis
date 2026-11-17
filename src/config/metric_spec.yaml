@@ -15,4 +15,7 @@ metrics:
      threshold: {min: 0.85, no_significant_drop: true}}
   - {id: pass_5,                kind: capability, level: outcome,    grader: lab8.metrics.summarize, threshold: {min: 0.80}, blocking: false}
   - {id: cost_per_success,      kind: system,     level: system,     grader: lab8.metrics.summarize, threshold: {max_increase: 0.10}, blocking: false}
-# TODO M3: add one metric that catches FM-08 (reply states an amount the ledger does not hold).
+  # M3 — FM-08 misreport: mọi số tiền trong reply phải bằng số ledger ghi (đọc ledger, không đọc lời agent).
+  - {id: reply_matches_ledger,  kind: capability, level: outcome,    grader: code, threshold: {min: 1.0}, blocking: true}
+  # FM-04 / FM-05: số đề xuất gửi host phải khớp nhãn (bắt agent tự trừ rồi tự từ chối, ledger vẫn = 0).
+  - {id: proposal_correct,      kind: capability, level: outcome,    grader: code, threshold: {min: 0.95}, blocking: false}
