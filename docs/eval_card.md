@@ -58,3 +58,11 @@ Card này đi kèm mỗi báo cáo và được dùng lại ở Day 10. Mọi s�
 | adversarial (14 item của pack) | pass_rate | ≥ 0.85 + không giảm có ý nghĩa | hồi quy chỉ ở claim tấn công (prompt injection, policy cũ, cross-principal) |
 | denial (11 item) | pass_rate | ≥ 0.90 + không giảm có ý nghĩa | agent bắt đầu hoàn tiền cho claim đáng lẽ bị từ chối (FM-02, FM-03, FM-06) |
 
+### Nhiễu và độ tin cậy (M6)
+
+- **A/A** (`python -m lab9.mutation --spec config/metric_spec_v2.yaml --aa 66,77,88,99,110`): cùng agent `swarm`, hai bộ seed khác nhau, Δ = **0.0000 ở mọi metric** (pass_rate 0.9786, pass_hat_5 0.8929 ở cả hai bên). Lý do: MockLLM tất định, và lỗi duy nhất của swarm phụ thuộc `seed % 5 == 0`. Seed 55 và seed 110 đều rơi vào trường hợp đó, nên hai bộ seed cho đúng cùng một mẫu lỗi.
+- **Với LLM thật, dải nhiễu > 0:** sampling (temperature, thứ tự token), thay đổi phía nhà cung cấp và timeout làm cùng một item lúc đúng lúc sai, nên A/A sẽ ra Δ khác 0 dù code không đổi. Sàn đặt trong dải đó sẽ chặn PR trung thực một cách ngẫu nhiên. Vì vậy với LLM thật phải chạy A/A nhiều lần, lấy biên độ Δ lớn nhất (hoặc phân vị 95%), và đặt sàn cách baseline **xa hơn** biên độ đó.
+- **Ngưỡng `pass_hat_5` = 0.85 (blocking):** baseline 0.8929 (25/28 item đúng cả 5 seed). Khoảng cách 0.043 lớn hơn dải nhiễu A/A (0) và lớn hơn 1/28 = 0.036, nên PR thêm đúng 1 item chập chờn vẫn qua, còn từ 2 item trở lên thì bị chặn. Đạt yêu cầu sàn ≥ 0.8.
+- **`pass_hat_5` bắt được thứ `pass_rate` bỏ qua:** `flaky_regression` (làm tròn sai 1/5 seed) có `pass_rate` 0.9143, vẫn trên sàn 0.85, nhưng `pass_hat_5` = 0.5714 → BLOCK. Agent đúng "trung bình" nhưng không đáng tin cho từng khách.
+- **Giới hạn cỡ mẫu:** một bug chỉ xuất hiện ở 1/3 seed (`rare`, bật khi `seed % 3 == 0`) chỉ chạm **seed 33** trong 11/22/33/44/55. Với 5 seed, không phát hiện nó một cách ổn định được: đổi bộ seed (ví dụ 11/22/44/55/77) là bug biến mất khỏi report. Muốn bắt ổn định cần nhiều seed hơn (với 15 seed, xác suất không gặp lần nào là (2/3)^15 ≈ 0.2%). Nhóm **không** hạ ngưỡng để "bắt" bug này. Đây là giới hạn của eval, không phải của gate.
+

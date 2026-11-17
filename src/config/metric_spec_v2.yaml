@@ -16,8 +16,11 @@ metrics:
      threshold: {min: 0.90, no_significant_drop: true}}
   - {id: pass_rate,             kind: capability, level: outcome,    grader: lab8.metrics.trial_pass, blocking: true,
      threshold: {min: 0.85, no_significant_drop: true}}
-  # TODO M6: add a blocking pass_hat_5 metric. Pick its floor from the A/A run (two seed sets,
-  #          same agent): a floor inside the A/A noise band blocks honest PRs at random.
+  # M6: pass^5 = xác suất cả 5 lần chạy cùng đúng. A/A (seeds 66,77,88,99,110 vs spec seeds) trên
+  # MockLLM: Δ = 0.0000 mọi metric; baseline pass_hat_5 = 0.8929 (25/28 item đúng cả 5 seed).
+  # Sàn 0.85 nằm ngoài dải nhiễu A/A và cách baseline 0.043 > 1/28: cho phép thêm đúng 1 item
+  # chập chờn, chặn từ 2 item trở lên. Không dùng no_significant_drop vì pass^k là số theo item, không theo dòng.
+  - {id: pass_hat_5,            kind: capability, level: outcome,    grader: lab9.stats.pass_hat_k, threshold: {min: 0.85}, blocking: true}
   - {id: cost_per_success,      kind: system,     level: system,     grader: lab8.metrics.summarize, threshold: {max_increase: 0.10}, blocking: false}
   # M3 carry-over: FM-08 misreport và FM-04/05 proposal.
   - {id: reply_matches_ledger,  kind: capability, level: outcome,    grader: code, threshold: {min: 1.0}, blocking: true}
